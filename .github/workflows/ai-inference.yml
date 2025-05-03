@@ -1,26 +1,38 @@
-name: 'AI Review Demo'
-on: pull_request
+name: 'Review with AI'
+on: 
+  pull_request:
 
 jobs:
   review:
     permissions:
+      models: read
       contents: read
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: AI Review
         id: inference
         uses: actions/ai-inference@v1.0.0
         with:
+          model: openai/gpt-4o
           system-prompt: |
             あなたはJavaコードレビュワーAIです。
-            以下の観点でコードの修正点を1～2点、端的に指摘し、それぞれに簡単な修正例もコードブロックで示してください。
+            開発者が書いたJavaコードの「修正点」を1～2点、端的に指摘し、それぞれに簡単な修正例もコードブロックで示してください。
+            - コードの可読性
+            - コーディング規約やベストプラクティス
+            - バグや論理的な誤り
+            - パフォーマンスやセキュリティ
+
+            良い点は省略し、全体で200トークン以内に収めてください。冗長な説明は避け、要点のみを箇条書きでまとめてください。
           prompt: |
             プルリクエストのタイトル: ${{ github.event.pull_request.title }}
             プルリクエストの本文: ${{ github.event.pull_request.body }}
-          max-tokens: 1000
+          max-tokens: 1000 # レスポンスの最大トークン数
 
       - name: Comment on PR
         env:
