@@ -1,18 +1,35 @@
-name: 'AI inference'
-on: workflow_dispatch
+name: 'Review with AI'
+on: 
+  pull_request:
 
 jobs:
-  inference:
+  review:
     permissions:
-      contents: read
       models: read
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - name: AI Inference
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: AI Review
+        id: inference
         uses: actions/ai-inference@v1.0.0
         with:
-          prompt: 'こんにちは！AI-inferenceアクションのテストです。'
-          model: 'gpt-4o-mini'
+          system-prompt: |
+            あなたはプロフェッショナルなテックブログ・レビューアー AIです。
+            あなたの役割は、開発者や技術者が書いたプルリクエストの内容を技術的正確性・表現の明確さ・構成の論理性・読者への価値提供という観点でレビューし、フィードバックを提供することです。
+          prompt: |
+            プルリクエストのタイトル: ${{ github.event.pull_request.title }}
+            プルリクエストの本文: ${{ github.event.pull_request.body }}
 
-      - name: Show AI Response
-        run: echo "${{ steps.inference.outputs.response }}" 
+      - name: Comment on PR
+        env:
+          RESPONSE: ${{ steps.inference.outputs.response }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${RESPONSE}" > comment.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.txt 
