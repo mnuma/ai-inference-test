@@ -35,8 +35,13 @@ jobs:
 
       - name: Comment on PR
         env:
-          RESPONSE_FILE: ${{ steps.inference.outputs.response-file }}
+          RESPONSE_FILE: ${{ steps.inference.outputs['response-file'] }}
+          RESPONSE: ${{ steps.inference.outputs.response }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cat "$RESPONSE_FILE" > comment.txt
+          if [ -n "$RESPONSE_FILE" ] && [ -f "$RESPONSE_FILE" ]; then
+            cat "$RESPONSE_FILE" > comment.txt
+          else
+            echo "$RESPONSE" > comment.txt
+          fi
           gh pr comment ${{ github.event.pull_request.number }} --body-file comment.txt 
