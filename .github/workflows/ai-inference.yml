@@ -19,6 +19,7 @@ jobs:
         id: inference
         uses: actions/ai-inference@v1.0.0
         with:
+          model: openai/gpt-4o
           system-prompt: |
             あなたはJavaコードレビュワーAIです。
             開発者が書いたJavaコードの「修正点」を1～2点、端的に指摘し、それぞれに簡単な修正例もコードブロックで示してください。
@@ -31,7 +32,7 @@ jobs:
           prompt: |
             プルリクエストのタイトル: ${{ github.event.pull_request.title }}
             プルリクエストの本文: ${{ github.event.pull_request.body }}
-          max-tokens: 1000
+          max-tokens: 1000 # レスポンスの最大トークン数
 
       - name: Comment on PR
         env:
