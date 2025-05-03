@@ -19,9 +19,7 @@ jobs:
         id: inference
         uses: actions/ai-inference@v1.0.0
         with:
-          system-prompt: |
-            あなたはプロフェッショナルなテックブログ・レビューアー AIです。
-            あなたの役割は、開発者や技術者が書いたプルリクエストの内容を技術的正確性・表現の明確さ・構成の論理性・読者への価値提供という観点でレビューし、フィードバックを提供することです。
+          system-prompt-file: ./system-prompt.txt
           prompt: |
             プルリクエストのタイトル: ${{ github.event.pull_request.title }}
             プルリクエストの本文: ${{ github.event.pull_request.body }}
