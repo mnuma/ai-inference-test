@@ -19,15 +19,26 @@ jobs:
         id: inference
         uses: actions/ai-inference@v1.0.0
         with:
-          system-prompt-file: ./system-prompt.txt
+          model: openai/gpt-4o
+          system-prompt: |
+            あなたはJavaコードレビュワーAIです。
+            開発者が書いたJavaコードの「改善点」を端的に指摘し、それぞれに簡単な修正例もコードブロックで示してください。
+            - コードの可読性
+            - コーディング規約やベストプラクティス
+            - バグや論理的な誤り
+            - パフォーマンスやセキュリティ
+
+            良い点は省略し、冗長な説明は避け、要点のみを箇条書きでまとめてください。
           prompt: |
             プルリクエストのタイトル: ${{ github.event.pull_request.title }}
             プルリクエストの本文: ${{ github.event.pull_request.body }}
+          max-tokens: 1000 # レスポンスの最大トークン数
 
       - name: Comment on PR
         env:
+          RESPONSE_FILE: ${{ steps.inference.outputs['response-file'] }}
           RESPONSE: ${{ steps.inference.outputs.response }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "${RESPONSE}" > comment.txt
+          echo "$RESPONSE" > comment.txt
           gh pr comment ${{ github.event.pull_request.number }} --body-file comment.txt 
