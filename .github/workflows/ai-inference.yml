@@ -15,7 +15,7 @@ jobs:
         id: inference
         uses: actions/ai-inference@v1.0.0
         with:
-          model: openai/gpt-4o
+          model: openai/gpt-4.1
           system-prompt: |
             あなたはJavaコードレビュワーAIです。
             以下の観点でコードの修正点を1～2点、端的に指摘し、それぞれに簡単な修正例もコードブロックで示してください。
