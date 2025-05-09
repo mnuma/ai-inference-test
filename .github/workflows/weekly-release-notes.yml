@@ -58,29 +58,23 @@ jobs:
 
       - name: Summarize with AI
         id: ai
-        uses: actions/ai-inference@v1
+        uses: actions/ai-inference@v1.0.0
         with:
-          prompt: ${{ steps.read_prompt.outputs.prompt }}
+          model: openai/gpt-4o
           system-prompt: |
             あなたは優秀なリリースノート作成者です。
-            以下は、先週1週間でmainブランチにマージされたPull Requestの内容と変更ファイルの一覧です。
-            これらの変更を読み取り、ユーザーや開発者が理解しやすいように、意義・改善点・影響範囲を整理し、全体を要約してください。
-            Markdown形式で出力してください。
+            以下は、先週1週間でmainブランチにマージされたPull Requestの一覧です。
+            これらの変更をまとめて、ユーザーや開発者が理解しやすいように、簡潔かつ明確に要約してください。
             PRの羅列ではなく、カテゴリや観点ごとにまとめてください。
-          model: openai/gpt-4o
+            Markdown形式で出力してください。
+          prompt: ${{ steps.read_prompt.outputs.prompt }}
           max-tokens: 1000
 
       - name: Save AI output to file
+        env:
+          RESPONSE: ${{ steps.ai.outputs.response }}
         run: |
-          echo "${{ steps.ai.outputs.output }}" > response.txt
-
-      - name: Save release notes
-        run: |
-          if [ -n "${{ steps.ai.outputs['response-file'] }}" ] && [ -s "${{ steps.ai.outputs['response-file'] }}" ]; then
-            cp "${{ steps.ai.outputs['response-file'] }}" weekly-release-notes.md
-          else
-            echo "(AI出力がありませんでした)" > weekly-release-notes.md
-          fi
+          echo "${RESPONSE}" > weekly-release-notes.md
 
       - name: Upload release notes
         uses: actions/upload-artifact@v4
