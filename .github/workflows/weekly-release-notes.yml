@@ -8,6 +8,9 @@ on:
 jobs:
   summarize:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      models: read
     steps:
       - uses: actions/checkout@v4
 
@@ -16,26 +19,32 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
             const prs = await github.paginate(github.rest.pulls.list, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'closed',
-              base: 'main',
               sort: 'updated',
               direction: 'desc',
               per_page: 100
             });
-            const merged = prs.filter(pr => pr.merged_at && pr.merged_at > since);
+            const merged = prs.filter(pr =>
+              pr.merged_at &&
+              pr.merged_at > since &&
+              pr.base.ref === 'main'
+            );
             const summary = merged.map(pr =>
               `### ${pr.title}\n${pr.body || 'No description.'}\n(PR #${pr.number})\n`
             ).join('\n');
-            require('fs').writeFileSync('merged_prs.md', summary);
+            fs.writeFileSync('merged_prs.md', summary);
 
       - name: Read prompt from file
         id: read_prompt
         run: |
-          python3 -c "import os; content = open('merged_prs.md', encoding='utf-8').read(); print(f'prompt<<EOF\\n{content}\\nEOF', file=open(os.environ['GITHUB_OUTPUT'], 'a'))"
+          echo "prompt<<EOF" >> $GITHUB_OUTPUT
+          cat merged_prs.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Summarize with AI
         id: ai
@@ -57,4 +66,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: weekly-release-notes
-          path: weekly-release-notes.md 
+          path: weekly-release-notes.md
