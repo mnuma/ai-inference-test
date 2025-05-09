@@ -58,6 +58,7 @@ jobs:
             個別のPRを列挙するのではなく、全体を整理して、意義や改善点、影響のある機能を説明してください。
             Markdown形式で出力してください。
           model: openai/gpt-4o
+          max-tokens: 1000
 
       - name: Save release notes
         run: echo "${{ steps.ai.outputs.output }}" > weekly-release-notes.md
