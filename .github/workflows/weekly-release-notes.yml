@@ -2,7 +2,7 @@ name: Weekly Release Notes
 
 on:
   schedule:
-    - cron: '0 0 * * 1' # 毎週月曜日 0:00 UTC に実行
+    - cron: '0 2 * * 2' # 毎週火曜日 11:00 JST に実行
   workflow_dispatch:
 
 jobs:
