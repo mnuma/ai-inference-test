@@ -1,0 +1,60 @@
+name: Weekly Release Notes
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # 毎週月曜日 0:00 UTC に実行
+  workflow_dispatch:
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch merged PRs in the past 7 days
+        id: fetch_prs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              base: 'main',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 100
+            });
+            const merged = prs.filter(pr => pr.merged_at && pr.merged_at > since);
+            const summary = merged.map(pr =>
+              `### ${pr.title}\n${pr.body || 'No description.'}\n(PR #${pr.number})\n`
+            ).join('\n');
+            require('fs').writeFileSync('merged_prs.md', summary);
+
+      - name: Read prompt from file
+        id: read_prompt
+        run: |
+          python3 -c "import os; content = open('merged_prs.md', encoding='utf-8').read(); print(f'prompt<<EOF\\n{content}\\nEOF', file=open(os.environ['GITHUB_OUTPUT'], 'a'))"
+
+      - name: Summarize with AI
+        id: ai
+        uses: actions/ai-inference@v1
+        with:
+          prompt: ${{ steps.read_prompt.outputs.prompt }}
+          system-prompt: |
+            あなたは優秀なリリースノート作成者です。
+            以下は、先週1週間でmainブランチにマージされたPull Requestの一覧です。
+            これらの変更をまとめて、ユーザーや開発者が理解しやすいように、簡潔かつ明確に要約してください。
+            個別のPRを列挙するのではなく、全体を整理して、意義や改善点、影響のある機能を説明してください。
+            Markdown形式で出力してください。
+          model: openai/gpt-4o
+
+      - name: Save release notes
+        run: echo "${{ steps.ai.outputs.output }}" > weekly-release-notes.md
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-release-notes
+          path: weekly-release-notes.md 
