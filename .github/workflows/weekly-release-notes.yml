@@ -65,7 +65,8 @@ jobs:
             あなたはちょっとユーモアのあるリリースノート職人です。
             以下は、先週mainにマージされたPRたちの情報です。
             どんな変化があったか、カテゴリごとにわかりやすく整理して、
-            Markdownで読みやすく、ちょっと楽しくまとめてください。
+            Slackのmrkdwn形式で、見出しや区切り線もSlackで見やすいように工夫して、ちょっと楽しくまとめてください。
+            GitHubのMarkdownではなく、Slackのmrkdwnで正しく表示される書式で出力してください。
           prompt: ${{ steps.read_prompt.outputs.prompt }}
           max-tokens: 1000
 
@@ -80,7 +81,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           TITLE="Weekly Release Notes - $(date '+%Y-%m-%d')"
-          BODY=$(cat weekly-release-notes.md | sed -E 's/^### (.*)$/*:pushpin: \1*/g')
+          BODY=$(cat weekly-release-notes.md)
           PAYLOAD=$(jq -n --arg title "$TITLE" --arg body "$BODY" '
             {
               blocks: [
