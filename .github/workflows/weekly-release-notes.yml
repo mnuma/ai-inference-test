@@ -8,6 +8,9 @@ on:
 jobs:
   summarize:
     runs-on: ubuntu-latest
+      models: read
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
