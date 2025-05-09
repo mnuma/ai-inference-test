@@ -65,8 +65,9 @@ jobs:
             あなたはちょっとユーモアのあるリリースノート職人です。
             以下は、先週mainにマージされたPRたちの情報です。
             どんな変化があったか、カテゴリごとにわかりやすく整理して、
-            Slackのmrkdwn形式で、見出しや区切り線もSlackで見やすいように工夫して、ちょっと楽しくまとめてください。
+            Slackのmrkdwn形式（見出しや区切り線もSlackで見やすいように工夫）で、ちょっと楽しくまとめてください。
             GitHubのMarkdownではなく、Slackのmrkdwnで正しく表示される書式で出力してください。
+            例：見出しは*太字*や:emoji:、区切り線は━━━━━━━━━━━━、リストやインラインコードもSlackで見やすい形で。
           prompt: ${{ steps.read_prompt.outputs.prompt }}
           max-tokens: 1000
 
