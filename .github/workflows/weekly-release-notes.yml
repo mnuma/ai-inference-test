@@ -80,7 +80,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           TITLE="Weekly Release Notes - $(date '+%Y-%m-%d')"
-          BODY=$(cat weekly-release-notes.md)
+          BODY=$(cat weekly-release-notes.md | sed -E 's/^### (.*)$/*:pushpin: \1*/g')
           PAYLOAD=$(jq -n --arg title "$TITLE" --arg body "$BODY" '
             {
               blocks: [
