@@ -9,7 +9,7 @@ jobs:
   summarize:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       models: read
     steps:
       - uses: actions/checkout@v4
@@ -19,45 +19,68 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
             const prs = await github.paginate(github.rest.pulls.list, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'closed',
-              base: 'main',
-              sort: 'updated',
-              direction: 'desc',
               per_page: 100
             });
-            const merged = prs.filter(pr => pr.merged_at && pr.merged_at > since);
-            const summary = merged.map(pr =>
-              `### ${pr.title}\n${pr.body || 'No description.'}\n(PR #${pr.number})\n`
-            ).join('\n');
-            require('fs').writeFileSync('merged_prs.md', summary);
+            const merged = prs.filter(pr =>
+              pr.merged_at &&
+              pr.merged_at > since &&
+              pr.base.ref === 'main'
+            );
+
+            let summary = '';
+            for (const pr of merged) {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number
+              });
+
+              const fileList = files.map(f => `- ${f.filename} (${f.status})`).join('\n');
+              summary += `### ${pr.title}\n${pr.body || 'No description.'}\n\n**Files changed:**\n${fileList}\n(PR #${pr.number})\n\n`;
+            }
+
+            fs.writeFileSync('merged_prs.md', summary);
 
       - name: Read prompt from file
         id: read_prompt
         run: |
-          python3 -c "import os; content = open('merged_prs.md', encoding='utf-8').read(); print(f'prompt<<EOF\\n{content}\\nEOF', file=open(os.environ['GITHUB_OUTPUT'], 'a'))"
+          {
+            echo "prompt<<EOF"
+            cat merged_prs.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Summarize with AI
         id: ai
-        uses: actions/ai-inference@v1
+        uses: actions/ai-inference@v1.0.0
         with:
-          prompt: ${{ steps.read_prompt.outputs.prompt }}
+          model: openai/gpt-4o
           system-prompt: |
             あなたは優秀なリリースノート作成者です。
             以下は、先週1週間でmainブランチにマージされたPull Requestの一覧です。
             これらの変更をまとめて、ユーザーや開発者が理解しやすいように、簡潔かつ明確に要約してください。
-            個別のPRを列挙するのではなく、全体を整理して、意義や改善点、影響のある機能を説明してください。
+            PRの羅列ではなく、カテゴリや観点ごとにまとめてください。
             Markdown形式で出力してください。
-          model: openai/gpt-4o
+          prompt: ${{ steps.read_prompt.outputs.prompt }}
+          max-tokens: 1000
 
-      - name: Save release notes
-        run: echo "${{ steps.ai.outputs.output }}" > weekly-release-notes.md
+      - name: Save AI output to file
+        env:
+          RESPONSE: ${{ steps.ai.outputs.response }}
+        run: |
+          echo "${RESPONSE}" > weekly-release-notes.md
 
-      - name: Upload release notes
-        uses: actions/upload-artifact@v4
-        with:
-          name: weekly-release-notes
-          path: weekly-release-notes.md 
+      - name: Notify to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          TEXT=$(cat weekly-release-notes.md | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"*Weekly Release Notes - $(date '+%Y-%m-%d')*\n\n${TEXT}\"}" \
+            "$SLACK_WEBHOOK_URL"
