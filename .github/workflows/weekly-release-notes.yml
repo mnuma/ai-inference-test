@@ -76,8 +76,8 @@ jobs:
 
       - name: Save release notes
         run: |
-          if [ -s response.txt ] && [ -n "$(cat response.txt | tr -d '\n')" ]; then
-            cat response.txt > weekly-release-notes.md
+          if [ -n "${{ steps.ai.outputs['response-file'] }}" ] && [ -s "${{ steps.ai.outputs['response-file'] }}" ]; then
+            cp "${{ steps.ai.outputs['response-file'] }}" weekly-release-notes.md
           else
             echo "(AI出力がありませんでした)" > weekly-release-notes.md
           fi
