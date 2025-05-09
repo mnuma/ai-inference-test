@@ -32,9 +32,19 @@ jobs:
               pr.merged_at > since &&
               pr.base.ref === 'main'
             );
-            const summary = merged.map(pr =>
-              `### ${pr.title}\n${pr.body || 'No description.'}\n(PR #${pr.number})\n`
-            ).join('\n');
+
+            let summary = '';
+            for (const pr of merged) {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number
+              });
+
+              const fileList = files.map(f => `- ${f.filename} (${f.status})`).join('\n');
+              summary += `### ${pr.title}\n${pr.body || 'No description.'}\n\n**Files changed:**\n${fileList}\n(PR #${pr.number})\n\n`;
+            }
+
             fs.writeFileSync('merged_prs.md', summary);
 
       - name: Read prompt from file
@@ -53,10 +63,10 @@ jobs:
           prompt: ${{ steps.read_prompt.outputs.prompt }}
           system-prompt: |
             あなたは優秀なリリースノート作成者です。
-            以下は、先週1週間でmainブランチにマージされたPull Requestの一覧です。
-            これらの変更をまとめて、ユーザーや開発者が理解しやすいように、簡潔かつ明確に要約してください。
-            個別のPRを列挙するのではなく、全体を整理して、意義や改善点、影響のある機能を説明してください。
+            以下は、先週1週間でmainブランチにマージされたPull Requestの内容と変更ファイルの一覧です。
+            これらの変更を読み取り、ユーザーや開発者が理解しやすいように、意義・改善点・影響範囲を整理し、全体を要約してください。
             Markdown形式で出力してください。
+            PRの羅列ではなく、カテゴリや観点ごとにまとめてください。
           model: openai/gpt-4o
           max-tokens: 1000
 
