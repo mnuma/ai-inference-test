@@ -80,7 +80,14 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          TEXT=$(cat weekly-release-notes.md | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
-          curl -X POST -H 'Content-type: application/json' \
-            --data "{\"text\":\"*Weekly Release Notes - $(date '+%Y-%m-%d')*\n\n${TEXT}\"}" \
-            "$SLACK_WEBHOOK_URL"
+          TITLE="Weekly Release Notes - $(date '+%Y-%m-%d')"
+          BODY=$(cat weekly-release-notes.md)
+          PAYLOAD=$(jq -n --arg title "$TITLE" --arg body "$BODY" '
+            {
+              blocks: [
+                { "type": "header", "text": { "type": "plain_text", "text": $title } },
+                { "type": "section", "text": { "type": "mrkdwn", "text": $body } }
+              ]
+            }
+          ')
+          curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
